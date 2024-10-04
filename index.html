@@ -1,10 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Disposable Chat Room</title>
+    <title>Disposable Chat Room with WebRTC</title>
     <style>
         body {
             background-color: #1c1c1e;
@@ -72,18 +71,45 @@
     <button onclick="sendMessage()">Send</button>
 
     <script>
-        // JavaScript code for handling chat functionality
+        let localConnection;
+        let remoteConnection;
+        let dataChannel;
+        let senderName = '';
+
+        // Prompt user for name
+        window.onload = function () {
+            const name = prompt('Please enter your name:');
+            senderName = name !== null && name.trim() !== '' ? name.trim() : 'Anonymous';
+            initializeConnection();
+        };
+
+        // Initialize WebRTC connection
+        function initializeConnection() {
+            localConnection = new RTCPeerConnection();
+            dataChannel = localConnection.createDataChannel('chat');
+            
+            dataChannel.onopen = handleDataChannelOpen;
+            dataChannel.onmessage = handleDataChannelMessage;
+
+            // Create and send offer to remote peer
+            localConnection.createOffer().then(offer => {
+                localConnection.setLocalDescription(offer);
+                // In real implementation, the offer needs to be sent to the remote peer via signaling
+            });
+        }
+
+        // Handle sending messages
         function sendMessage() {
             const messageInput = document.getElementById('message-input');
             const message = messageInput.value.trim();
             if (message !== '') {
-                appendMessage(senderName, message); // Use senderName variable
-                saveMessage(senderName, message);
+                appendMessage(senderName, message);
+                dataChannel.send(message);
                 messageInput.value = '';
-                checkChatLength();
             }
         }
 
+        // Append message to the chat box
         function appendMessage(sender, message) {
             const chatBox = document.getElementById('chat-box');
             const messageElement = document.createElement('div');
@@ -93,35 +119,16 @@
             chatBox.scrollTop = chatBox.scrollHeight; // Scroll to bottom
         }
 
-        function saveMessage(sender, message) {
-            const xhr = new XMLHttpRequest();
-            xhr.open('POST', 'save.php', true);
-            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-            xhr.send('sender=' + encodeURIComponent(sender) + '&message=' + encodeURIComponent(message));
+        // Handle receiving messages via data channel
+        function handleDataChannelMessage(event) {
+            const message = event.data;
+            appendMessage('Peer', message);
         }
 
-        function checkChatLength() {
-            const chatMessages = document.querySelectorAll('#chat-box .message');
-            if (chatMessages.length > 100) {
-                clearChat();
-            }
+        function handleDataChannelOpen() {
+            console.log("Data channel is open");
         }
 
-        function clearChat() {
-            const chatBox = document.getElementById('chat-box');
-            chatBox.innerHTML = ''; // Clear all chat messages
-        }
-
-        // Function to prompt user for sender name on page load
-        window.onload = function () {
-            const name = prompt('Please enter your name:');
-            if (name !== null && name.trim() !== '') {
-                senderName = name.trim();
-            } else {
-                senderName = 'Anonymous'; // Default sender name if no input provided
-            }
-        };
     </script>
 </body>
-
 </html>
