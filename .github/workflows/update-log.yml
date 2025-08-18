@@ -1,0 +1,22 @@
+name: Update Log
+on:
+  repository_dispatch:
+    types: [pinged]
+
+jobs:
+  update-log:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Update log.json
+        run: |
+          echo "{\"lastPing\": \"${{ github.event.client_payload.name }}\", \"timestamp\": \"$(date -u '+%Y-%m-%d %H:%M:%S UTC')\"}" > log.json
+
+      - name: Commit & push changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add log.json
+          git commit -m "Update log: ${{ github.event.client_payload.name }}"
+          git push
